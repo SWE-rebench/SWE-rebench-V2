@@ -1,0 +1,39 @@
+FROM --platform=linux/amd64 rocker/r-ver:4.4.1
+
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
+# Base tools + typical system deps many R packages need
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    wget \
+    unzip \
+    zip \
+    ca-certificates \
+    build-essential \
+    pkg-config \
+    gfortran \
+    cmake \
+    gnupg \
+    libssl-dev \
+    libcurl4-openssl-dev \
+    libxml2-dev \
+    libgit2-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Useful R env defaults
+# - R_LIBS_USER: user-writable library path (kept in workspace)
+# - CRAN mirror + parallel compile set in system Rprofile
+ENV R_LIBS_USER=/workspace/R \
+    RENV_PATHS_ROOT=/workspace/.renv \
+    CRAN_REPO=https://cloud.r-project.org
+
+# Configure default CRAN repo and parallel builds for source packages
+RUN echo 'options(repos = c(CRAN = Sys.getenv("CRAN_REPO", "https://cloud.r-project.org")),' \
+          'Ncpus = max(1L, parallel::detectCores()))' \
+    >> /usr/local/lib/R/etc/Rprofile.site
+
+# Create a non-root user (uncomment USER line below to use it)
+RUN adduser --disabled-password --gecos 'dog' nonroot
+# USER nonroot

@@ -1,0 +1,45 @@
+# C# build container
+# Stable .NET SDK on Debian with common native deps
+
+FROM --platform=linux/amd64 mcr.microsoft.com/dotnet/sdk:8.0
+
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
+# Base tools + native libs many .NET workloads/packages may need
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    wget \
+    unzip \
+    zip \
+    ca-certificates \
+    build-essential \
+    pkg-config \
+    cmake \
+    gnupg \
+    libssl-dev \
+    zlib1g-dev \
+    libicu-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+# Keep caches inside /workspace so they’re writable even for non-root
+ENV NUGET_PACKAGES=/workspace/.nuget/packages \
+    DOTNET_CLI_HOME=/workspace/.dotnet \
+    DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+    DOTNET_NOLOGO=1 \
+    XDG_CACHE_HOME=/workspace/.cache \
+    XDG_CONFIG_HOME=/workspace/.config \
+    XDG_DATA_HOME=/workspace/.local/share
+
+# (Optional) Install common .NET tooling that behaves like "universal" build images
+# Uncomment if you want these available everywhere:
+# RUN dotnet tool install -g dotnet-ef \
+#  && dotnet tool install -g dotnet-sonarscanner
+
+# Create a non-root user (uncomment USER line below to use it)
+RUN adduser --disabled-password --gecos 'dog' nonroot
+# USER nonroot
+
+# Working directory for your C# projects
+WORKDIR /workspace

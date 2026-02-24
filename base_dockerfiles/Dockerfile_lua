@@ -1,0 +1,37 @@
+# Lua build container (Linux/amd64)
+# Stable Lua + LuaRocks for reliable builds across projects
+
+FROM --platform=linux/amd64 nickblah/lua:5.4-bookworm
+
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
+# Base tools + typical native deps many Lua rocks use
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    wget \
+    unzip \
+    zip \
+    ca-certificates \
+    build-essential \
+    pkg-config \
+    cmake \
+    gnupg \
+    # Common C libs headers that rocks often link against
+    libssl-dev \
+    libsqlite3-dev \
+    libreadline-dev \
+    zlib1g-dev \
+    libffi-dev \
+    libpcre2-dev \
+    libcurl4-openssl-dev \
+    # LuaRocks (Debian package)
+    luarocks \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create a non-root user (uncomment USER line below to use it)
+RUN adduser --disabled-password --gecos 'dog' nonroot
+
+# Working directory for your Lua projects
+WORKDIR /workspace

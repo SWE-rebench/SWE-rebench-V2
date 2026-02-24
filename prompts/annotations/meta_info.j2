@@ -1,0 +1,100 @@
+You are classifying software engineering tasks for RL validity. Determine if a task is of high-quality or reflects environment preparation issues (B1-B9).
+
+## Classification Codes
+
+| Code | Category | Description |
+|------|----------|-------------|
+| A | SOLVABLE | Problem is clearly specified, tests align with stated requirements |
+| B1 | TEST_SUITE_COUPLING | Correct fix may fail due to unrelated test regressions |
+| B2 | IMPLICIT_NAMING | Tests expect specific names/signatures not in problem statement |
+| B3 | EXTERNAL_DEPENDENCY | Essential info in external URLs not quoted in issue |
+| B4 | AMBIGUOUS_SPEC | Missing expected behavior, repro steps, or acceptance criteria |
+| B5 | PATCH_ARTIFACTS | Reference patch includes unrelated changes tests may require |
+| B6 | IMPLICIT_KNOWLEDGE | Requires domain knowledge not stated or inferrable from repo |
+| B7 | INLINE_TEST | Inline test in the patch |
+| B8 | VISUAL_REQUIREMENT | Task requires images/visualizations/visual UI context not captured in plain text |
+| B9 | NON_ENGLISH_TEXT | Task description contains non-English language that must be understood |
+
+## Decision Process
+
+1. Extract intent from ISSUE_TEXT: expected behavior, observed behavior, reproduction, acceptance criteria
+2. Check test alignment: Do assertions verify stated requirements or introduce new ones?
+3. Scan for B-category signals:
+   - B1: Tests span unrelated modules
+   - B2: String assertions for names not in issue
+   - B3: URLs to external docs/specs
+   - B4: Vague or missing acceptance criteria
+   - B5: Patch modifies unrelated files that are then required by tests
+   - B6: Tests assert specific approaches not mentioned
+   - B7: Inline test in the normal PATCH
+   - B8: Visual artifacts are required to understand/solve task (images, screenshots, mockups, visual specs)
+   - B9: Issue/problem statement is partially or fully non-English
+4. Classify: A if clean, B[1-9] for primary issue
+
+## Rubric: PR Category
+
+Choose one or more categories that best describe the PR.
+
+Allowed categories:
+
+```
+{
+  "critical_bug", "major_bug", "minor_bug", "regression_bug", "edge_case_bug", "performance_bug",
+  "security_bug", "integration_feat", "core_feat", "ui_ux_feat", "dev_ops_enh", "documentation_enh"
+}
+```
+
+## Rubric: Task Difficulty
+
+Estimate task difficulty based on the amount of code changes required, logic complexity, and domain knowledge needed. Choose one level assuming expected time to implement: easy (<15 min), medium (15 min–1h), hard (>1h).
+
+Allowed difficulty levels:
+
+```
+{
+  "easy", "medium", "hard"
+}
+```
+
+
+## Output (JSON only)
+
+```json
+{
+  "reasoning": "3-5 sentences: (1) summarize issue intent, (2) assess test alignment, (3) note any B-category signals, (4) justify classification",
+  "intent_completeness": "complete | partial | insufficient",
+  "test_alignment_issues": ["list specific misalignments or empty if aligned"],
+  "detected_issues": {
+    "B1": false, "B2": false, "B3": false,
+    "B4": false, "B5": false, "B6": false, "B7": false,
+    "B8": false, "B9": false
+  },
+  "external_urls": ["extracted URLs if any"],
+  "pr_categories": ["one or more from the PR category rubric"],
+  "difficulty": "easy | medium | hard",
+  "code": "A|B1|B2|B3|B4|B5|B6|B7|B8|B9",
+  "confidence": 0.0
+}
+
+```
+
+---
+
+## Inputs
+
+**REPO**: {{ repo }}
+
+**ISSUE_TEXT**:
+```
+{{ problem_statement }}
+```
+
+**TEST_PATCH**:
+```
+{{ test_patch }}
+```
+
+**GOLDEN PATCH** (reference only):
+```
+{{ patch }}
+```

@@ -1,0 +1,66 @@
+You analyze code changes in pull requests. Your task is to extract information about changed interfaces and signatures that are explicitly checked in the tests.
+
+## Decision Process
+
+1. Identify new functions or classes
+2. Identify functions or classes whose signatures have changed significantly (arguments changed, not just indentation)
+3. Use the test patch to see which of them, if any, are explicitly called in the new test code
+
+Ignore as interfaces:
+
+- Purely internal helpers (for example names starting with "_" and not used directly in tests)
+- Type aliases, enums, simple data or config holders
+- Constructors or trivial overrides that only support other documented interfaces
+- Constants, flags, small config values, and simple data declarations
+- Anything that is not explicitly called in the test patch
+
+
+## Output Format
+
+Output must be wrapped in a single root tag:
+
+```
+<ANSWER>Method: <ClassName.method_name(self, key_params...)> Location:  Inputs: <important parameters, types or roles, and key constraints> Outputs: <return type or behavior, including important error conditions> Description: <1 to 2 sentences on what it does and when to use it>
+
+Function: <function_name(key_params...)>
+Location:
+Inputs: <important parameters, types or roles, and key constraints>
+Outputs: <return type or behavior, including important error conditions>
+Description: <1 to 2 sentences on what it does and when to use it>
+
+...repeat blocks for each interface...</ANSWER>
+```
+
+If there are no qualifying interfaces, output exactly:
+
+```
+<ANSWER>No new interfaces are introduced.</ANSWER>
+```
+
+Guidelines:
+
+- Only include symbols that:
+  - appear in the production patch with a changed signature as new or clearly changed, and
+  - are directly constructed or called in {{ test_patch }}
+- Keep descriptions technical and concise
+
+---
+
+## Inputs
+
+**REPO**: {{ repo }}
+
+**ISSUE_TEXT**:
+```
+{{ problem_statement }}
+```
+
+**TEST_PATCH**:
+```
+{{ test_patch }}
+```
+
+**GOLDEN PATCH** (reference only):
+```
+{{ patch }}
+```

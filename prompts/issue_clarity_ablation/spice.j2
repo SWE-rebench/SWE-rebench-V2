@@ -1,0 +1,66 @@
+# GitHub Issue Specification Classifier
+
+**Task:** Classify the issue as **well-specified** (0-1) or **underspecified** (2-3) based on whether precise test assertions can be derived.
+
+{% set title, description = problem_statement.split(&#x27;\n&#x27;, maxsplit=1) -%}
+Issue Title: {{ title }}
+Issue Description: {{ description }}
+---
+
+## Core Criteria (Testability-Driven)
+
+### **Well-Specified (0-1)**
+- **0 (Fully Testable):**
+  - ✅ **Repro Code:** Executable snippet to trigger the issue.
+  - ✅ **Explicit Success Criteria:** "Should return X," "Must raise Y."
+  - ✅ **No Ambiguity:** Single, clear resolution path.
+
+
+- **1 (Testable with Minor Assumptions):**
+  - ✅ **Core Problem + Repro:** Clear issue + partial repro code.
+  - ❌ **Missing:** Edge cases or explicit success criteria.
+  - **Example:**
+
+
+### **Underspecified (2-3)**
+- **2 (Ambiguous):**
+  - ❌ **Multiple Solutions:** "Either fix X or Y" without justification.
+  - ❌ **Unclear Success:** "Improve performance" without metrics.
+  - **Example:**
+
+
+- **3 (Non-Actionable):**
+  - ❌ **No Technical Details:** "Fix this bug."
+  - ❌ **External Context:** Relies on unexplained images/links.
+
+
+## Decision Flow
+1. **Is it 0?**
+   - Check for **all three**: repro code, expected behaviour, no ambiguity.
+2. **Is it 1?**
+   - Has **repro + core problem** but needs minor assumptions.
+3. **Is it 2?**
+   - Suggests **multiple fixes** or has **unclear success criteria**.
+4. **Default to 3:**
+   - No repro, error logs, or design specifics.
+
+---
+
+Candidate Solution:
+- Does the issue include hints, outlines, or partial solutions?
+- Is there any specific code snippet or description that suggests how to address the problem?
+
+## Final Classification
+
+Output Requirements:
+
+Return only a JSON object with the following structure (no additional text or formatting):
+```json
+{
+  "explanation": "<Tie to testability criteria>",
+  "score": <well-specified|underspecified>,
+  "candidate_solution": <true or false>
+}
+Ensure that the JSON is complete and properly formatted, using lowercase true or false for booleans.
+In the "explanation" field of the JSON, *show your full reasoning* that is **thorough** and **focused**—cover every decision step. Highlight edge cases or assumptions, and **avoid repetition or filler**.</pre>
+<

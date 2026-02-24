@@ -1,0 +1,74 @@
+You are evaluating whether a GitHub issue description is suitable for a coding benchmark.
+
+Context (important):
+- We have GitHub issues from open-source repositories.
+- Each issue has an associated PR that *did* fix the problem, and that PR also added/changed tests.
+- In our benchmark, a developer will ONLY receive the issue text (shown below). They will NOT see the original PR or its tests.
+- The developer is assumed to have full access to the repository codebase at the time of the issue (they can search the code, run the package, inspect existing behavior), but they cannot ask maintainers for clarification.
+
+Your job:
+Score how well-specified the issue text is *based only on the text shown in <problem_statement>*.
+Do NOT assume any missing details are available elsewhere (e.g., “see screenshot”, “see link”, “see discussion”) unless that information is explicitly present in the issue text itself.
+
+Repository: {{ repo }}
+
+<problem_statement>
+{{ problem_statement }}
+</problem_statement>
+
+What “well-specified” means for this benchmark:
+A well-specified issue gives enough information that an experienced engineer could implement a fix that would likely match the intended behavior, without having to guess key requirements. Concretely: if two independent engineers worked from only this issue text + the codebase, they should converge on essentially the same expected behavior and fix.
+
+Use this checklist (mentally) when scoring:
+1) Problem clarity:
+   - Is it clear what is broken / missing / wrong?
+   - Is the scope clear (which component/API/feature)?
+2) Expected outcome / acceptance criteria:
+   - Does the issue state what the correct behavior should be?
+   - Are success conditions testable/observable (outputs, exceptions, return values, formatting, side effects)?
+3) Reproduction details (for bugs):
+   - Are there steps to reproduce, minimal example code, or a clear scenario?
+   - Are actual vs expected results described (including error messages/stack traces if relevant)?
+4) Constraints and edge cases:
+   - Are important edge cases or compatibility expectations mentioned (versions, platforms, inputs)?
+   - Does it specify what should *not* change?
+5) Ambiguity risk:
+   - Are there multiple reasonable interpretations of the desired behavior?
+   - Would the engineer need to make product/design choices not implied by the issue?
+
+Scoring rubric (choose exactly one):
+- 0 (Well-specified): Clear problem + clear expected behavior. A solution can be implemented with minimal guesswork.
+- 1 (Mostly specified): Some minor blanks, but there is a single sensible interpretation and a reasonable engineer could proceed confidently.
+- 2 (Vague/ambiguous): Key requirements are missing or underspecified; multiple plausible “correct” fixes exist; success criteria are unclear.
+- 3 (Unworkable): The issue text does not provide enough information to understand what to do, or depends on missing context not included here.
+
+Calibration examples (for your internal comparison only; do not quote them):
+- 0 example:
+<example>
+{{ examples[0].problem_statement -}}
+</example>
+- 1 example:
+<example>
+{{ examples[1].problem_statement -}}
+</example>
+- 2 example:
+<example>
+{{ examples[2].problem_statement -}}
+</example>
+- 3 example:
+<example>
+{{ examples[3].problem_statement -}}
+</example>
+
+Decision guidance:
+- Be conservative: if success criteria are not explicit and you would need to guess intended behavior, prefer 2 over 1.
+- If the issue relies on non-included artifacts (“screenshot attached”, “see link”) or purely subjective wording (“should be nicer”, “improve performance” without targets), that pushes toward 2-3.
+- If the issue provides a concrete failing example, error message, or explicit rule change, that pushes toward 0-1.
+
+Output format (strict):
+- First: a short explanation (at least 100 characters) naming the key info that IS present and what is missing/ambiguous.
+- Last line: only the integer score (0, 1, 2, or 3).
+
+Example output:
+The issue specifies the exact failing input and the expected output, but omits platform versions; still only one sensible fix path.
+1

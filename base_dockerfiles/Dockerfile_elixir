@@ -1,0 +1,43 @@
+# Elixir build container
+# Stable Elixir + Erlang on Debian with common native deps
+
+FROM --platform=linux/amd64 elixir:1.16
+
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
+# Base tools + native libs many Elixir/Erlang NIFs depend on
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    wget \
+    unzip \
+    zip \
+    ca-certificates \
+    build-essential \
+    pkg-config \
+    cmake \
+    gnupg \
+    libssl-dev \
+    zlib1g-dev \
+    libgmp-dev \
+    libffi-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+# Keep caches inside /workspace so they’re writable even for non-root
+ENV MIX_HOME=/workspace/.mix \
+    HEX_HOME=/workspace/.hex \
+    REBAR_CACHE_DIR=/workspace/.cache/rebar3 \
+    XDG_CACHE_HOME=/workspace/.cache \
+    XDG_CONFIG_HOME=/workspace/.config \
+    XDG_DATA_HOME=/workspace/.local/share
+
+# Pre-install Hex and Rebar locally (uses MIX_HOME/HEX_HOME above)
+RUN mix local.hex --force && mix local.rebar --force
+
+# Create a non-root user (uncomment USER line below to use it)
+RUN adduser --disabled-password --gecos 'dog' nonroot
+# USER nonroot
+
+# Working directory for your Elixir projects
+WORKDIR /workspace

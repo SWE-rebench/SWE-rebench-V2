@@ -1,0 +1,77 @@
+# Solidity / Foundry + Node base image
+# - Foundry (forge/cast/anvil)
+# - Node.js (Hardhat/Truffle tooling)
+# - solc-select (pin specific Solidity compiler versions)
+
+FROM --platform=linux/amd64 debian:bookworm-slim
+
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
+# Base tools often handy in CI and native deps
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl wget git unzip zip build-essential gnupg \
+    python3 python3-venv python3-pip pkg-config openssl \
+ && rm -rf /var/lib/apt/lists/*
+
+# Node.js LTS (for Hardhat/Truffle/TS toolchains)
+# You can switch to setup_22.x if you prefer Node 22 LTS.
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+ && apt-get update && apt-get install -y --no-install-recommends nodejs \
+ && corepack enable \
+ && rm -rf /var/lib/apt/lists/*
+
+# Install Foundry (forge/cast/anvil)
+# Installs into /root/.foundry then we link the binaries into /usr/local/bin
+RUN curl -L https://foundry.paradigm.xyz | bash \
+ && /root/.foundry/bin/foundryup \
+ && ln -s /root/.foundry/bin/forge /usr/local/bin/forge \
+ && ln -s /root/.foundry/bin/cast  /usr/local/bin/cast  \
+ && ln -s /root/.foundry/bin/anvil /usr/local/bin/anvil
+
+# Install solc-select (lets you pick exact solc versions per project)
+RUN pip3 install --no-cache-dir solc-select \
+ && mkdir -p /usr/local/bin \
+ && echo '#!/usr/bin/env bash\nsolc-select "$@"' > /usr/local/bin/solc-select \
+ && chmod +x /usr/local/bin/solc-select \
+ # Preinstall a common compiler (adjust or add more as you like)
+ && solc-select install 0.8.27 \
+ && solc-select use 0.8.27
+
+# Optional network default (useful in some CI networks)
+# Uncomment if you specifically want IPv6 preference.
+# ENV _JAVA_OPTIONS="-Djava.net.preferIPv6Addresses=true"
+
+# Create a non-root user (uncomment USER below to use it)
+RUN adduser --disabled-password --gecos 'dog' nonroot
+# USER nonroot
+
+# Workspace + writable caches (works for root or non-root)
+WORKDIR /workspace
+ENV \
+  # Node/Yarn/PNPM caches inside workspace for faster CI caching
+  NPM_CONFIG_CACHE=/workspace/.npm \
+  YARN_CACHE_FOLDER=/workspace/.yarn \
+  PNPM_HOME=/workspace/.pnpm \
+  # Foundry home so artifacts/caches are in the workspace
+  FOUNDRY_DIR=/workspace/.foundry \
+  # Common EVM local node port
+  FOUNDRY_ETH_RPC_URL=http://localhost:8545
+
+# Make sure cache dirs exist and are writable
+RUN mkdir -p /workspace/.npm /workspace/.yarn /workspace/.pnpm /workspace/.foundry \
+ && chmod -R 777 /workspace
+
+# Expose Anvil default port (useful in dev/CI)
+EXPOSE 8545
+
+# Helpful versions on image build logs
+RUN node --version && npm --version && forge --version && cast --version && anvil --version && solc --version
+
+# --- Usage notes -------------------------------------------------------------
+# - Hardhat: npx hardhat compile / test
+# - Foundry: forge build / forge test
+# - Switch compiler: `solc-select install 0.8.21 && solc-select use 0.8.21`
+# - If you use a non-root user, uncomment `USER nonroot`.
+# -----------------------------------------------------------------------------

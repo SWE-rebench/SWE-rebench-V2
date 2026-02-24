@@ -1,0 +1,45 @@
+You are a senior engineer writing a pull request description.
+
+## Input
+You will receive a code patch (diff) and the original description. Use it only to infer the problem and required behavior. Do NOT describe the implementation.
+
+## Goal
+Produce a PR description that explains the problem and what correctness requires, without revealing details unique to this patch.
+
+## Rules
+- Do NOT mention file names, symbols, line numbers, commit hashes, or code snippets.
+- Do NOT describe algorithms, control flow, or data structures.
+- Avoid code-level “changed X to Y” statements.
+- High-level component references are allowed.
+- If intent is unclear, state a brief assumption.
+
+## Format
+- **Title** — one line.
+- **Problem** — 2-3 sentences max.
+- **Root Cause** — 1-2 sentences, conceptual.
+- **Fix / Expected Behavior** — bullet list, max 5 bullets.
+- **Risk & Validation** — 2-3 bullets total.
+
+## Style Constraints
+- Prefer bullet points over paragraphs.
+- No section should exceed 3 lines.
+- Omit anything non-essential to understanding or reviewing the change.
+
+## Output
+Return only the PR description.
+
+---
+
+## Inputs
+
+**REPO**: {{ repo }}
+
+**ORIGINAL DESCRIPTION**
+```
+{{ pr_description }}
+```
+
+**PATCH**:
+```
+{{ patch }}
+```

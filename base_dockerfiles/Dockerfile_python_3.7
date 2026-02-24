@@ -1,0 +1,40 @@
+FROM --platform=linux/amd64 python:3.7-slim
+
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
+# Base tools + native libs many Python packages with C extensions depend on
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    wget \
+    unzip \
+    zip \
+    ca-certificates \
+    build-essential \
+    pkg-config \
+    cmake \
+    gnupg \
+    libssl-dev \
+    zlib1g-dev \
+    libffi-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+# Keep caches inside /workspace so they're writable even for non-root
+ENV PIP_CACHE_DIR=/workspace/.cache/pip \
+    PYTHONPYCACHEPREFIX=/workspace/.cache/pycache \
+    XDG_CACHE_HOME=/workspace/.cache \
+    XDG_CONFIG_HOME=/workspace/.config \
+    XDG_DATA_HOME=/workspace/.local/share
+
+# Upgrade tooling and install pytest
+RUN python -m pip install --upgrade pip setuptools wheel \
+ && python -m pip install pytest
+
+# Create a non-root user (uncomment USER line below to use it)
+RUN adduser --disabled-password --gecos 'dog' nonroot
+# USER nonroot
+
+# Working directory for your Python projects
+WORKDIR /workspace
+

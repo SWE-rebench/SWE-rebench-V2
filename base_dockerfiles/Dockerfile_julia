@@ -1,0 +1,35 @@
+FROM --platform=linux/amd64 julia:1.10-bookworm
+
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
+# Base tools + typical build deps many Julia packages use
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    wget \
+    unzip \
+    zip \
+    ca-certificates \
+    build-essential \
+    pkg-config \
+    gfortran \
+    cmake \
+    gnupg \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Useful Julia env defaults
+ENV JULIA_NUM_THREADS=auto \
+    JULIA_PKG_SERVER=https://pkg.julialang.org \
+    MPIR_CVAR_CH3_INTERFACE_HOSTNAME=127.0.0.1 \
+    JULIA_MPIEXEC_FLAGS="-hosts localhost"
+
+RUN adduser --disabled-password --gecos 'dog' nonroot
+
+# Working directory for your Julia projects
+WORKDIR /workspace
+
+# Keep Julia's depot (package cache) inside workspace so it’s writable even for non-root
+ENV JULIA_DEPOT_PATH=/workspace/.julia
+

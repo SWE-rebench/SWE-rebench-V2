@@ -1,0 +1,69 @@
+# Clojure build container (Linux/amd64)
+# JDK 21 + tools.deps + Leiningen + Boot for broad Clojure project coverage
+
+FROM --platform=linux/amd64 eclipse-temurin:21-jdk
+
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
+# Base tools + common native deps for builds (incl. CLJS pipelines)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    wget \
+    unzip \
+    zip \
+    ca-certificates \
+    build-essential \
+    rlwrap \
+    bash \
+    gnupg \
+    python3 \
+    nodejs \
+    npm \
+    && rm -rf /var/lib/apt/lists/*
+
+# --- Clojure toolchains -------------------------------------------------------
+# Pin versions as ARGs so you can override at build time if needed
+ARG CLOJURE_VERSION=1.11.3.1463        # tools.deps (clj/clojure)
+ARG LEIN_VERSION=2.11.2                # Leiningen
+ARG BOOT_VERSION=2.8.3                 # Boot
+
+# Install Clojure tools.deps (clj/clojure)
+RUN curl -fsSL "https://download.clojure.org/install/linux-install-${CLOJURE_VERSION}.sh" -o /tmp/clojure-install.sh \
+ && bash /tmp/clojure-install.sh \
+ && rm -f /tmp/clojure-install.sh
+
+# Install Leiningen
+RUN curl -fsSL "https://raw.githubusercontent.com/technomancy/leiningen/${LEIN_VERSION}/bin/lein" -o /usr/local/bin/lein \
+ && chmod +x /usr/local/bin/lein \
+ # Prime self-install cache (does not fail the build if offline)
+ && lein --version || true
+
+# Install Boot
+RUN curl -fsSL "https://github.com/boot-clj/boot-bin/releases/download/${BOOT_VERSION}/boot.sh" -o /usr/local/bin/boot \
+ && chmod +x /usr/local/bin/boot \
+ # Prime download of boot jar (non-fatal if it fails)
+ && boot -V || true
+
+# Useful env defaults
+ENV JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8 -Djava.net.preferIPv6Addresses=true" \
+  CI=true
+
+# Create a non-root user (uncomment USER line below to use it)
+RUN adduser --disabled-password --gecos 'dog' nonroot
+# USER nonroot
+
+# Workspace
+WORKDIR /workspace
+
+# Keep Clojure caches inside workspace so they’re writable for non-root
+# (Maven, gitlibs, and tools.deps config)
+ENV MAVEN_OPTS="-Dmaven.repo.local=/workspace/.m2" \
+    LEIN_HOME=/workspace/.lein \
+    BOOT_HOME=/workspace/.boot \
+    CLJ_CONFIG=/workspace/.clojure \
+    GITLIBS=/workspace/.gitlibs
+
+RUN mkdir -p /workspace/.m2 /workspace/.lein /workspace/.boot /workspace/.clojure /workspace/.gitlibs
+

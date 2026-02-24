@@ -1,0 +1,48 @@
+You are given raw stdout/stderr from a repository test run. Your task is to write a Python log parser that converts this log into a structured per-test status map.
+
+Output format
+- Implement a single function:
+
+    def parse_log(log: str) -> dict[str, str]:
+
+- The function must return a dictionary mapping each test case name to one of:
+    TestStatus.PASSED.value
+    TestStatus.FAILED.value
+    TestStatus.SKIPPED.value
+
+Assumptions
+- You will be provided (1) one or more example logs produced by the same test runner, and (2) a short description of how tests are invoked (optional).
+- Test names should be stable identifiers (e.g., suite/class + method, or fully-qualified test name) as they appear in the log.
+- If the log contains repeated entries for the same test, the final observed outcome should be used.
+
+Requirements
+- Use only Python standard library modules (e.g., re, typing). Do not import external dependencies.
+- The parser must be robust to noise lines, timestamps, and unrelated output.
+- Prefer parsing from structured markers when available (e.g., explicit PASS/FAIL/SKIP lines), rather than relying on summary lines.
+- If the runner prints parameterized tests or subtests, include the full name used by the runner (including parameters) as the key.
+
+Implementation guidance
+- Use regular expressions or simple string matching to extract (status, test_name).
+- Ignore infrastructure failures that do not correspond to a specific test case unless the runner clearly reports them as a named test.
+
+Example (Go test)
+Below is an example of the expected style and return type for 'go test'-like output:
+
+def parse_log_gotest(log: str) -> dict[str, str]:
+    test_status_map = {}
+    pattern = r"^--- (PASS|FAIL|SKIP): (.+) \((.+)\)$"
+    for line in log.split("\n"):
+        m = re.match(pattern, line.strip())
+        if m:
+            status, test_name, _ = m.groups()
+            if status == "PASS":
+                test_status_map[test_name] = TestStatus.PASSED.value
+            elif status == "FAIL":
+                test_status_map[test_name] = TestStatus.FAILED.value
+            elif status == "SKIP":
+                test_status_map[test_name] = TestStatus.SKIPPED.value
+    return test_status_map
+
+Now write the parser for the provided test log(s). Return only Python code containing the parse_log function (and any helper definitions it needs), and nothing else.
+
+{{log}}

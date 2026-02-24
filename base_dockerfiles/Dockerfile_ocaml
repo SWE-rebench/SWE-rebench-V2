@@ -1,0 +1,59 @@
+# OCaml build container (Linux/amd64)
+# Stable OCaml + opam for reliable builds across projects
+
+FROM --platform=linux/amd64 debian:bookworm
+
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
+# Base tools + typical build deps many OCaml packages use
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    wget \
+    unzip \
+    zip \
+    ca-certificates \
+    build-essential \
+    pkg-config \
+    cmake \
+    gnupg \
+    m4 \
+    opam \
+    libgmp-dev \
+    libssl-dev \
+    zlib1g-dev \
+    libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Useful OCaml/opam env defaults
+# Keep opam's root (package/switch cache) inside workspace so it’s writable even for non-root
+ENV OPAMYES=1 \
+    OPAMROOT=/workspace/.opam
+
+# Create a non-root user (uncomment USER line below to use it)
+RUN adduser --disabled-password --gecos 'dog' nonroot
+
+# Working directory for your OCaml projects
+WORKDIR /workspace
+
+# Initialize opam and create a default OCaml switch.
+# You can change OCAML_VERSION to pin a specific compiler version.
+ARG OCAML_VERSION=5.2.1
+# Use bash for RUN steps below
+SHELL ["/bin/bash", "-lc"]
+
+# 1) Init opam root only (stable layer unless OPAM config changes)
+RUN opam init --disable-sandboxing -y --bare
+
+# 2) Create & select the compiler switch (rebuilt only when version changes)
+ARG OCAML_VERSION=5.2.1
+RUN opam switch create -y "${OCAML_VERSION}" "ocaml-base-compiler.${OCAML_VERSION}" \
+ && opam switch set "${OCAML_VERSION}" \
+ && opam update
+
+# 3) Ensure new shells load the switch automatically
+RUN printf 'test -r %s && eval "$(opam env)"\n' "$OPAMROOT/env" > /etc/profile.d/opam.sh
+
+# 4) Make the workspace (incl. OPAMROOT) writable by nonroot
+RUN chown -R nonroot:nonroot /workspace

@@ -1,0 +1,79 @@
+We have a dataset of GitHub issues from various open-source Python repositories. Each issue has an accompanying pull request (PR) that resolves it by:
+1. Changing or adding code to fix the problem, and
+2. Adding or modifying tests to confirm the problem is fixed.
+
+We want to use these issues to benchmark coding ability. We will give an engineer only the text of the issue and see if they can produce a valid fix (without seeing the original PR). Then, we will test their solution with the test files from the original PR to confirm it fixes the described problem.
+
+**Your task** is to decide **how well-specified** the issue text is. Assume you are an experienced software engineer with full access to the codebase (but **no opportunity to ask questions**). If the issue text leaves significant gaps or ambiguities, you must rely solely on the text provided and your knowledge of the codebase. You will assign one of **four scores**—0, 1, 2, or 3—to indicate how well-defined the issue is.
+
+## Scoring Criteria
+
+- **Score 0**:
+  The issue is **very clearly specified** and **contains all essential details** about the bug or feature request. It is straightforward to understand what needs to be done, and no major clarifications are missing. An engineer could confidently implement the solution using only the information in the issue.
+
+  **Example**:
+  ```ignore-paths: normalize path to PosixPath
+  ### Current problem
+  ...
+  ### Desired solution
+  ...
+  ```
+  The user explains exactly what is wrong, includes relevant configuration, environment details, error outputs, or usage examples, and describes precisely how the fix should behave.
+
+- **Score 1**:
+  The issue is **mostly clear** but **some minor details** are missing or left ambiguous. While there is a sensible interpretation of how to fix the problem, a developer might benefit from small clarifications. In most cases, though, the developer can still proceed confidently using standard assumptions or minimal additional inference.
+
+  **Example**:
+  ```python
+  # Example snippet
+  y = (18,25,43,70,115)
+  interpolate(y,5)  # returns nan, but ideally returns 115
+  ...
+  ```
+  The user shows the wrong vs. desired behavior but might omit edge cases or additional environment info. The main goal is still understandable.
+
+- **Score 2**:
+  The issue is **somewhat vague or incomplete**. There is enough information to guess at the problem, but **significant ambiguity** remains about the intended fix or broader context. Multiple different solutions might conceivably address the complaint, or the user provides a high-level complaint without being clear on how exactly to resolve it. A developer can guess, but must make larger assumptions.
+
+  **Example**:
+  ```text
+  Copy param ignored in TfidfVectorizer
+  I was playing with vectorizers and I found this:
+  ...
+  Is there anything I am missing?
+  ```
+  The user highlights a possible bug or design mismatch but does not clearly state whether or how it should be changed, leaving the solution direction unclear.
+
+- **Score 3**:
+  The issue is **extremely vague** or **lacks essential details**. It is almost impossible to infer what a successful solution involves. Without further information or discussion, a developer cannot meaningfully proceed.
+
+  **Example**:
+  ```text
+  Investigate #5495 (crash without a provided template)
+  See https://github.com/PyCQA/pylint/issues/5495#issuecomment-1011022169
+  ```
+  The user provides only a brief note or link to a separate thread, with no clear instructions or reproduction steps, making it nearly impossible to fix.
+
+---
+
+Below is the issue text you need to evaluate:
+
+```
+{{ problem_statement }}
+```
+
+---
+
+### How to Respond
+
+After reading the issue text:
+1. **Compose a short paragraph (about 100 words)** explaining your reasoning:
+  - Why you believe the issue is fully detailed, mostly detailed, partially vague, or extremely unclear.
+  - Any major assumptions or clarifications you notice would still be needed if you were coding a fix.
+2. **Give a final answer** in the form:
+  ```
+  #### Score: X
+  ```
+  where **X** is your chosen score (0, 1, 2, or 3).
+
+This response format will ensure consistency across all labeled samples.

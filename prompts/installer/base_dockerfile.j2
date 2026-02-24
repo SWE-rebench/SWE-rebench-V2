@@ -1,0 +1,53 @@
+You are an expert DevOps/build engineer. Your task is to generate a minimal, reusable base Dockerfile for projects written in <LANG_NAME>.
+
+Goal
+Create a base image that contains the runtime/toolchain and common system dependencies needed to:
+1) install project dependencies,
+2) build/compile the project (if applicable),
+3) run the project's test suite.
+
+Scope and constraints
+- This is a *base* image used across many repositories, so avoid repository-specific assumptions.
+- Prefer official or widely used upstream base images for <LANG_NAME> (e.g., official images on Docker Hub) rather than installing the toolchain from scratch.
+- Target linux/amd64 unless <LANG_NAME> strongly requires otherwise.
+- Use only system packages that are broadly useful (git, curl, ca-certificates, build tools, common native libs). Avoid adding uncommon services.
+- Do not add project source code, do not run project commands, and do not require network access at runtime beyond typical dependency installation.
+
+Required contents
+1) A suitable FROM line (prefer a stable, commonly used toolchain version; choose an LTS/stable version when possible).
+2) Installation of common build and debugging utilities:
+   - git, curl/wget, unzip/zip, ca-certificates
+   - build-essential / compiler toolchain, pkg-config, cmake (if relevant)
+3) Installation of native libraries commonly required by packages in this ecosystem (keep this conservative).
+4) Environment variables that place language/package-manager caches under /workspace (so they are writable even for non-root):
+   - Set XDG_CACHE_HOME, XDG_CONFIG_HOME, XDG_DATA_HOME when applicable
+   - Also set language-specific cache/home vars (e.g., for package managers)
+5) Create a non-root user (but keep USER optional, as a commented line).
+6) WORKDIR /workspace.
+
+Output requirements
+- Return only the Dockerfile contents, and nothing else (no explanation, no markdown).
+- Keep the Dockerfile reasonably short and readable.
+- Clean apt caches (rm -rf /var/lib/apt/lists/*) to reduce image size.
+
+Example style (Elixir)
+[The following is only an example of the expected style and structure; do not copy it verbatim.]
+
+FROM --platform=linux/amd64 elixir:1.16
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git curl wget unzip zip ca-certificates \
+    build-essential pkg-config cmake gnupg \
+    libssl-dev zlib1g-dev libgmp-dev libffi-dev \
+ && rm -rf /var/lib/apt/lists/*
+ENV MIX_HOME=/workspace/.mix \
+    HEX_HOME=/workspace/.hex \
+    XDG_CACHE_HOME=/workspace/.cache \
+    XDG_CONFIG_HOME=/workspace/.config \
+    XDG_DATA_HOME=/workspace/.local/share
+RUN adduser --disabled-password --gecos 'nonroot' nonroot
+# USER nonroot
+WORKDIR /workspace
+
+Now generate the base Dockerfile for {{lang}}

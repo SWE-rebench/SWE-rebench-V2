@@ -1,0 +1,49 @@
+# Swift build container (Linux/amd64)
+# Stable Swift toolchain on Debian/Ubuntu + common native deps
+
+FROM --platform=linux/amd64 swift:5.10-jammy
+# If you want Swift 6, switch to: swift:6.0-jammy
+
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
+# Base tools + libs commonly needed by SwiftPM packages (C/C++ deps, SSL, SQLite, zlib, ICU, XML, CURL)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    wget \
+    unzip \
+    zip \
+    ca-certificates \
+    build-essential \
+    pkg-config \
+    cmake \
+    ninja-build \
+    clang \
+    libssl-dev \
+    libsqlite3-dev \
+    zlib1g-dev \
+    libicu-dev \
+    libxml2-dev \
+    libcurl4-openssl-dev \
+    tzdata \
+ && rm -rf /var/lib/apt/lists/*
+
+# Keep caches inside /workspace so it’s writable even for non-root
+# SwiftPM mainly uses $HOME/.swiftpm and project-local .build/
+ENV XDG_CACHE_HOME=/workspace/.cache \
+    XDG_CONFIG_HOME=/workspace/.config \
+    XDG_DATA_HOME=/workspace/.local/share \
+    HOME=/workspace
+
+# Create a non-root user (uncomment USER line below to use it)
+RUN adduser --disabled-password --gecos 'dog' nonroot
+# USER nonroot
+
+# Working directory for your Swift projects
+WORKDIR /workspace
+
+# Notes:
+# - Build & test with: `swift build -c release` and `swift test`
+# - Artifacts live in the project’s .build/; tool caches go under /workspace via $HOME/.swiftpm
+# - If you enable the non-root user above, the env keeps everything writable.

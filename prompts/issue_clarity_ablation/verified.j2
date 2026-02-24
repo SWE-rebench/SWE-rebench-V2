@@ -1,0 +1,46 @@
+We have a dataset of GitHub issues from various open-source repositories. Each issue comes with a PR that successfully solves the issue described. Each PR consists of 2 parts: (1) code that resolves the issue (2) changes to the test files of the repository, which check whether the issue has been resolved.
+
+We intend to use samples in this dataset as a benchmark for coding ability: For each sample, we give an engineer the issue text and ask them to write code to resolve the issue (without revealing the solution from the original PR). Then, we apply the test files from the original PR to their code and run the tests to check whether their solution passes.
+
+Importantly, this setup assumes that:
+- The issue description is sufficiently well-specified to understand what the problem is, and what the correct solution should look like.
+- The tests are correctly scoped to the issue i.e. they correctly test for a solution exactly as described in the issue description, and do not test any other unrelated functionality.
+
+In this task, you will help to check those assumptions and identify which issue + test samples are suitable for use in our benchmark.
+
+You are now considering an issue from the {{ repo }} repository.
+
+Please take a moment to read the issue description below.
+
+**IMPORTANT:** Our setup will only provide the main issue text as shown below, so please answer the questions on the basis of only the text shown here.
+
+<problem_statement>
+{{ problem_statement }}
+</problem_statement>
+
+How well-specified is the issue text? Imagine that you are an experienced software engineer who has been instructed to create a PR that successfully resolves the above GitHub issue. You have full access to the codebase, and can see the issue description as it is above. But you are not able to ask for clarification and would need to work exclusively from this information. Is the issue description well-specified enough for a meaningful attempt at a solution?
+
+You should classify this issue based on the following options.
+
+- 0: The issue is well-specified and it is clear what is required for a successful solution.
+<example>
+{{ examples[0].problem_statement -}}
+</example>
+
+- 1: There are some blanks to fill in about the issue, but there is a sensible interpretation of what is required for a successful solution.
+<example>
+{{ examples[1].problem_statement -}}
+</example>
+
+- 2: The issue is vague and there is room for ambiguity. It is unclear what a successful solution would look like.
+<example>
+{{ examples[2].problem_statement -}}
+</example>
+
+- 3: It is almost impossible to understand what you are being asked to do without further information.
+<example>
+{{ examples[3].problem_statement -}}
+</example>
+
+
+Please respond with a short explanation of your choice (minimum 100 characters) followed by the selected option number.</pre>

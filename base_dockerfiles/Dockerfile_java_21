@@ -1,0 +1,24 @@
+FROM --platform=linux/amd64 maven:3.9-eclipse-temurin-21
+
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
+RUN apt update && apt install -y \
+wget \
+git \
+build-essential \
+ant \
+unzip \
+&& rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSL -o mvnd.zip https://downloads.apache.org/maven/mvnd/1.0.2/maven-mvnd-1.0.2-linux-amd64.zip && \
+    unzip mvnd.zip -d /tmp && \
+    mv /tmp/maven-mvnd-1.0.2-linux-amd64 /usr/local/mvnd && \
+    rm mvnd.zip && \
+    rm -rf /tmp/maven-mvnd-1.0.2-linux-amd64
+
+ENV MVND_HOME=/usr/local/mvnd
+ENV PATH=$MVND_HOME/bin:$PATH
+ENV _JAVA_OPTIONS="-Djava.net.preferIPv6Addresses=true"
+
+RUN adduser --disabled-password --gecos 'dog' nonroot

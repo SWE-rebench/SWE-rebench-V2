@@ -1,0 +1,47 @@
+# Kotlin build container (Linux/amd64)
+# Includes: Temurin JDK 21, Kotlin (latest via SDKMAN), Gradle (latest)
+
+FROM --platform=linux/amd64 eclipse-temurin:11-jdk
+
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
+# Base tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    wget \
+    unzip \
+    zip \
+    ca-certificates \
+    build-essential \
+    gnupg \
+ && rm -rf /var/lib/apt/lists/*
+
+# Optional JVM option often useful in CI containers
+ENV _JAVA_OPTIONS="-Djava.net.preferIPv6Addresses=true"
+
+# Install SDKMAN!, then latest Kotlin and Gradle
+ENV SDKMAN_DIR=/usr/local/sdkman \
+    SDKMAN_CANDIDATES_API=https://api.sdkman.io/2 \
+    SDKMAN_DIR_CONTRIB=/usr/local/sdkman
+RUN curl -s "https://get.sdkman.io" | bash && \
+    bash -lc "source ${SDKMAN_DIR}/bin/sdkman-init.sh && \
+              export SDKMAN_NON_INTERACTIVE=true && \
+              sdk install kotlin && \
+              sdk install gradle && \
+              kotlin -version && \
+              gradle -v"
+
+# Put SDKMAN-managed binaries on PATH for all shells
+ENV PATH="${SDKMAN_DIR}/candidates/kotlin/current/bin:${SDKMAN_DIR}/candidates/gradle/current/bin:${PATH}"
+
+# Create a non-root user (uncomment USER line below to use it)
+RUN adduser --disabled-password --gecos 'dog' nonroot
+# USER nonroot
+
+# Working directory for your project
+WORKDIR /workspace
+
+# Helpful defaults: cache Gradle in a writable location when using non-root
+ENV GRADLE_USER_HOME=/workspace/.gradle
