@@ -122,5 +122,19 @@ Installer/build prompts live in `prompts/installer/`:
 - `base_dockerfile.j2` — base image generation
 - `agent.j2` — installer agent prompt
 
+
+# Citation
+
+```bibtex
+@misc{badertdinov2026swerebenchv2languageagnosticswe,
+      title={SWE-rebench V2: Language-Agnostic SWE Task Collection at Scale}, 
+      author={Ibragim Badertdinov and Maksim Nekrashevich and Anton Shevtsov and Alexander Golubev},
+      year={2026},
+      eprint={2602.23866},
+      archivePrefix={arXiv},
+      primaryClass={cs.SE},
+      url={https://arxiv.org/abs/2602.23866}, 
+}
+
 Issue clarity ablations are under `prompts/issue_clarity_ablation/`:
 - `verified.j2`, `verified_plus.j2`, `verified_extra.j2`, `spice.j2`, `rebench_v1.j2`
