@@ -1,4 +1,4 @@
-You are classifying software engineering tasks for RL validity. Determine if a task is of high-quality or reflects environment preparation issues (B1-B9).
+You are classifying software engineering tasks for RL validity. Determine if a task is of high-quality or reflects environment preparation issues (B1-B11).
 
 ## Classification Codes
 
@@ -6,14 +6,16 @@ You are classifying software engineering tasks for RL validity. Determine if a t
 |------|----------|-------------|
 | A | SOLVABLE | Problem is clearly specified, tests align with stated requirements |
 | B1 | TEST_SUITE_COUPLING | Correct fix may fail due to unrelated test regressions |
-| B2 | IMPLICIT_NAMING | Tests expect specific names/signatures not in problem statement |
+| B2 | IMPLICIT_NAMING | Tests expect specific names, signatures, error message strings, or output values derived from the patch implementation but not specified in the problem statement |
 | B3 | EXTERNAL_DEPENDENCY | Essential info in external URLs not quoted in issue |
 | B4 | AMBIGUOUS_SPEC | Missing expected behavior, repro steps, or acceptance criteria |
 | B5 | PATCH_ARTIFACTS | Reference patch includes unrelated changes tests may require |
 | B6 | IMPLICIT_KNOWLEDGE | Requires domain knowledge not stated or inferrable from repo |
 | B7 | INLINE_TEST | Inline test in the patch |
-| B8 | VISUAL_REQUIREMENT | Task requires images/visualizations/visual UI context not captured in plain text |
+| B8 | VISUAL_REQUIREMENT | Task requires images/visualizations/visual UI context not captured in plain text — including inline markdown images (`![...](url)`) embedded in the issue or PR description |
 | B9 | NON_ENGLISH_TEXT | Task description contains non-English language that must be understood |
+| B10 | TEXT_FILE_TESTS | Test patch only modifies plain-text fixture files (e.g. `.txt`, `.csv`) rather than code; expected behavior is encoded as opaque text diffs, making it hard to understand what is being tested |
+| B11 | MULTI_ISSUE_PR | PR addresses multiple independent issues or bugs simultaneously, creating ambiguity about which change is required to pass the tests |
 
 ## Decision Process
 
@@ -21,15 +23,17 @@ You are classifying software engineering tasks for RL validity. Determine if a t
 2. Check test alignment: Do assertions verify stated requirements or introduce new ones?
 3. Scan for B-category signals:
    - B1: Tests span unrelated modules
-   - B2: String assertions for names not in issue
+   - B2: String assertions for names, error messages, or specific output values not derivable from the issue; assertIn/assertEqual on literal strings present only in the golden patch
    - B3: URLs to external docs/specs
    - B4: Vague or missing acceptance criteria
    - B5: Patch modifies unrelated files that are then required by tests
    - B6: Tests assert specific approaches not mentioned
    - B7: Inline test in the normal PATCH
-   - B8: Visual artifacts are required to understand/solve task (images, screenshots, mockups, visual specs)
+   - B8: Visual artifacts are required to understand/solve task — check for markdown image syntax `![...](url)` in ISSUE_TEXT, or references to screenshots/mockups that cannot be read as plain text
    - B9: Issue/problem statement is partially or fully non-English
-4. Classify: A if clean, B[1-9] for primary issue
+   - B10: All changed files in TEST_PATCH are `.txt`, `.csv`, or similar non-code fixture files; no Python/JS/etc. test functions are added or modified
+   - B11: Problem statement or PR references/closes multiple separate GitHub issues; tests appear to cover two or more independent fixes
+4. Classify: A if clean, B[1-11] for primary issue
 
 ## Rubric: PR Category
 
@@ -67,12 +71,12 @@ Allowed difficulty levels:
   "detected_issues": {
     "B1": false, "B2": false, "B3": false,
     "B4": false, "B5": false, "B6": false, "B7": false,
-    "B8": false, "B9": false
+    "B8": false, "B9": false, "B10": false, "B11": false
   },
   "external_urls": ["extracted URLs if any"],
   "pr_categories": ["one or more from the PR category rubric"],
   "difficulty": "easy | medium | hard",
-  "code": "A|B1|B2|B3|B4|B5|B6|B7|B8|B9",
+  "code": "A|B1|B2|B3|B4|B5|B6|B7|B8|B9|B10|B11",
   "confidence": 0.0
 }
 
@@ -87,6 +91,9 @@ Allowed difficulty levels:
 **ISSUE_TEXT**:
 ```
 {{ problem_statement }}
+
+These are interfaces that you need to implement, they will be tested:
+{{ interface }}
 ```
 
 **TEST_PATCH**:
