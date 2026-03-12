@@ -1,0 +1,35 @@
+# Dart build container (Linux/amd64)
+# Stable Dart SDK for reliable builds across projects
+
+FROM --platform=linux/amd64 dart:stable-sdk
+
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
+# Base tools + typical native build deps some Dart packages use (FFI, etc.)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    wget \
+    unzip \
+    zip \
+    ca-certificates \
+    build-essential \
+    pkg-config \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Useful Dart env defaults
+# PUB_CACHE inside workspace so it's writable even for non-root
+ENV PUB_CACHE=/workspace/.pub-cache \
+    CI=true
+
+# Create a non-root user (uncomment USER line below to use it)
+RUN adduser --disabled-password --gecos 'dog' nonroot
+# USER nonroot
+
+# Working directory for your Dart projects
+WORKDIR /workspace
+
+# Ensure cache directories exist and are writable
+RUN mkdir -p /workspace/.pub-cache && chown -R nonroot:nonroot /workspace
