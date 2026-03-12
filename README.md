@@ -6,6 +6,30 @@ Tools and prompt templates used to build and evaluate SWE-rebench-v2 tasks for t
 - **Dockerfile generation** (base images + per-task instance images)
 - **Task evaluation** using generated instance images and log parsers
 
+## How to Run Eval with Existing Docker Images
+
+1. Using a local sample JSON for debugging:
+
+```bash
+python3 scripts/eval.py \
+  --json sample.json \
+  --max-workers 1 \
+  --golden-eval \
+  --report-json eval_report.json
+```
+
+2. Using the 20-task sample from Hugging Face:
+
+```bash
+python3 scripts/eval.py \
+  --hf-dataset ibragim-bad/SWE-rebench-V2-sample \
+  --hf-config default \
+  --hf-split train \
+  --max-workers 8 \
+  --golden-eval \
+  --report-json eval_report.json
+```
+
 ## Repository layout
 
 - `prompts/annotations/` — main labeling prompts (Jinja templates)
@@ -137,5 +161,3 @@ Issue clarity ablations are under `prompts/issue_clarity_ablation/`:
       primaryClass={cs.SE},
       url={https://arxiv.org/abs/2602.23866}, 
 }
-
-

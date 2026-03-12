@@ -136,6 +136,18 @@ def get_parser(parser_name: str):
     return parser
 
 
+def normalize_command_list(value: object, field_name: str, instance_id: str) -> list[str]:
+    if isinstance(value, str):
+        value = [value]
+    if not isinstance(value, list):
+        raise ValueError(f"Task {instance_id} missing {field_name}.")
+
+    commands = [item for item in value if isinstance(item, str) and item.strip()]
+    if not commands:
+        raise ValueError(f"Task {instance_id} missing {field_name}.")
+    return commands
+
+
 def write_patch(temp_dir: Path, name: str, content: str) -> Path:
     path = temp_dir / name
     path.write_text(content, encoding="utf-8")
@@ -196,9 +208,11 @@ def evaluate_instance(
         raise ValueError(f"Task {instance_id} missing repo.")
 
     install_config = spec.get("install_config", {})
-    test_cmds = install_config.get("test_cmd", [])
-    if not isinstance(test_cmds, list) or not test_cmds:
-        raise ValueError(f"Task {instance_id} missing install_config.test_cmd.")
+    test_cmds = normalize_command_list(
+        install_config.get("test_cmd", []),
+        "install_config.test_cmd",
+        instance_id,
+    )
 
     parser_name = install_config.get("log_parser")
     if not parser_name:
@@ -269,13 +283,14 @@ def resolve_task_image(
     if not instance_id:
         raise ValueError("Task missing instance_id.")
 
-    if from_hf:
-        image = spec.get("image_name")
-        if not image or not isinstance(image, str):
+    image = spec.get("image_name")
+    if image is not None:
+        if not isinstance(image, str) or not image.strip():
             raise ValueError(f"Task {instance_id} missing top-level image_name.")
-        # TODO: Add optional mode to build instance image from combine.Dockerfile.j2
-        # using install_config.image_name + local base_dockerfiles.
         return image
+
+    if from_hf:
+        raise ValueError(f"Task {instance_id} missing top-level image_name.")
 
     tag = f"{tag_prefix}{instance_id}"
     if image_registry:
