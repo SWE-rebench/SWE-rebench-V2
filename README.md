@@ -30,6 +30,35 @@ python3 scripts/eval.py \
   --report-json eval_report.json
 ```
 
+## SWE-rebench V2.1
+
+[SWE-rebench V2.1](https://huggingface.co/datasets/ibragim-bad/SWE-rebench-V2.1) contains 21,272 re-verified
+tasks: SWE-rebench V2 tasks with repaired statements, tests, images and log parsers, plus 7,935 Python tasks
+from the first SWE-rebench. Each row is the content of one Harbor task, so evaluation runs the Harbor
+verifier: `solution/solve.sh` applies the patch, then `tests/test.sh` restores `test_files`, applies
+`test_patch`, runs `test_cmd` and grades the log with the standalone grader for `log_parser`. Reward is 1 when
+every `FAIL_TO_PASS` and `PASS_TO_PASS` test passes; tests outside these lists are ignored.
+
+```bash
+python3 scripts/eval.py \
+  --hf-dataset ibragim-bad/SWE-rebench-V2.1 \
+  --instance-ids aio-libs__aiohttp-10300,0b01001001__spectree-64 \
+  --max-workers 2 \
+  --golden-eval \
+  --report-json eval_report.json
+```
+
+`--patches` works as for V2 rows. `--parquet <files or dirs>` reads a local copy instead of the Hub. When the
+dataset viewer is unavailable (for example, for a private dataset), `eval.py` downloads the parquet files with
+`huggingface_hub`; set `HF_TOKEN` or run `hf auth login` for private datasets.
+
+Convert rows to Harbor task directories, byte-identical to the tasks published on the Harbor Hub:
+
+```bash
+python3 scripts/to_harbor.py --hf-dataset ibragim-bad/SWE-rebench-V2.1 --out tasks
+harbor run -p tasks/aio-libs__aiohttp-10300 -a oracle
+```
+
 ## Repository layout
 
 - `prompts/annotations/` — main labeling prompts (Jinja templates)
@@ -46,6 +75,8 @@ python3 scripts/eval.py \
 - `scripts/build_base_images.py` — build base Docker images from `base_dockerfiles/`
 - `scripts/build_instance_images.py` — render + build per-task images
 - `scripts/eval.py` — run tasks in Docker and parse test logs
+- `scripts/to_harbor.py` — write SWE-rebench V2.1 rows as Harbor task directories
+- `lib/harbor_tasks/` — Harbor task templates, standalone graders and row loaders for SWE-rebench V2.1
 - `lib/agent/log_parsers.py` — parsers referenced by tasks
 - `sample.json` — example task list
 - `issue_based_tasks_sample.json` — issue-based task samples

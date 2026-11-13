@@ -2,6 +2,7 @@
 import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
+import os
 import re
 import subprocess
 import sys
@@ -35,6 +36,8 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(LIB_DIR))
 
 from agent import log_parsers
+from harbor_tasks.rows import is_harbor_row, load_hub_rows, load_parquet_rows
+from harbor_tasks.task_files import solution_files, verifier_files
 
 HF_ROWS_ENDPOINT = "https://datasets-server.huggingface.co/rows"
 LOGS_DIR = Path("logs")
@@ -67,7 +70,11 @@ def fetch_hf_rows(
         }
     )
     url = f"{HF_ROWS_ENDPOINT}?{query}"
-    req = Request(url, headers={"User-Agent": "rebench-eval/1.0"})
+    headers = {"User-Agent": "rebench-eval/1.0"}
+    token = os.environ.get("HF_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req = Request(url, headers=headers)
     with urlopen(req, timeout=60) as resp:  # nosec: fixed trusted endpoint
         content = resp.read()
     return json.loads(content.decode("utf-8"))
@@ -273,6 +280,71 @@ def evaluate_instance(
     return result
 
 
+def evaluate_harbor_instance(
+    spec: dict,
+    image: str,
+    patch_override: dict | None,
+) -> dict:
+    """Run the Harbor oracle flow of a SWE-rebench-V2.1 row: solution/solve.sh, then tests/test.sh."""
+    instance_id = spec["instance_id"]
+    patch = spec["patch"] if patch_override is None else patch_override.get("patch", spec["patch"])
+    files = {**solution_files(spec, patch), **verifier_files(spec)}
+
+    with tempfile.TemporaryDirectory(prefix="eval_task_") as tmp:
+        root = Path(tmp)
+        for rel, content in files.items():
+            path = root / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content, encoding="utf-8", newline="")
+            path.chmod(0o755 if path.suffix == ".sh" else 0o644)
+        verifier_dir = root / "verifier"
+        verifier_dir.mkdir()
+        verifier_dir.chmod(0o777)
+
+        docker_cmd = ["docker", "run", "--rm"]
+        for item in spec.get("env") or []:
+            docker_cmd += ["-e", f"{item['name']}={item['value']}"]
+        docker_cmd += [
+            "-v", f"{root / 'solution'}:/solution:ro",
+            "-v", f"{root / 'tests'}:/tests:ro",
+            "-v", f"{verifier_dir}:/logs/verifier",
+            "-w", spec["workdir"],
+            image,
+            "/bin/bash", "-c",
+            "bash /solution/solve.sh > /logs/verifier/solve.log 2>&1; bash /tests/test.sh",
+        ]
+        result = subprocess.run(docker_cmd, check=False, capture_output=True, text=True)
+
+        def read(name: str) -> str:
+            path = verifier_dir / name
+            return path.read_text(encoding="utf-8", errors="replace") if path.is_file() else ""
+
+        output = "\n".join(
+            part
+            for part in (read("solve.log"), result.stdout or "", result.stderr or "", read("test_output.log"))
+            if part
+        )
+        reward = read("reward.txt").strip()
+        report = json.loads(read("report.json") or "{}")
+        test_results = json.loads(read("test_results.json") or "{}")
+
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    log_path = LOGS_DIR / f"{instance_id}_log.txt"
+    log_path.write_text(output, encoding="utf-8")
+
+    return {
+        "instance_id": instance_id,
+        "exit_code": result.returncode,
+        "passed_match": reward == "1",
+        "fail_to_pass": report.get("fail_to_pass", {}),
+        "pass_to_pass": report.get("pass_to_pass", {}),
+        "passed_actual": test_results.get("PASSED", []),
+        "failed_actual": test_results.get("FAILED", []),
+        "log_length": len(output),
+        "log_path": str(log_path),
+    }
+
+
 def resolve_task_image(
     spec: dict,
     from_hf: bool,
@@ -344,7 +416,8 @@ def evaluate_task(
         )
         maybe_pull_image(image=image, from_hf=from_hf)
         patch_override = None if golden_eval else patch_overrides.get(instance_id)
-        result = evaluate_instance(spec, image, patch_override)
+        evaluate = evaluate_harbor_instance if is_harbor_row(spec) else evaluate_instance
+        result = evaluate(spec, image, patch_override)
         return {"instance_id": instance_id, "result": result}
     except Exception as exc:
         return {"instance_id": instance_id, "error": str(exc)}
@@ -368,6 +441,16 @@ def build_report_item(spec: dict, outcome: dict) -> dict:
         }
 
     result = outcome["result"]
+    if "fail_to_pass" in result:
+        return {
+            "instance_id": instance_id,
+            "from_fail_to_pass": sorted(k for k, ok in result["fail_to_pass"].items() if ok),
+            "failed_from_pass_to_pass": sorted(k for k, ok in result["pass_to_pass"].items() if not ok),
+            "passed_match": result.get("passed_match", False),
+            "exit_code": result.get("exit_code"),
+            "log_path": result.get("log_path"),
+            "error": "",
+        }
     passed_actual = set(result.get("passed_actual", []))
     from_fail_to_pass = sorted(passed_actual.intersection(fail_to_pass_expected))
     failed_from_pass_to_pass = sorted(pass_to_pass_expected.difference(passed_actual))
@@ -393,6 +476,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Evaluate instances via docker.")
     source_group = parser.add_mutually_exclusive_group(required=True)
     source_group.add_argument("--json", help="Path to JSON file with tasks.")
+    source_group.add_argument(
+        "--parquet",
+        nargs="+",
+        help="Local parquet files or directories with tasks (e.g. a SWE-rebench-V2.1 download).",
+    )
     source_group.add_argument(
         "--hf-dataset",
         help="Hugging Face dataset id, e.g. ibragim-bad/test-21-02.",
@@ -467,16 +555,27 @@ def main() -> int:
         print("--max-workers must be >= 1.", file=sys.stderr)
         return 1
 
-    use_hf = bool(args.hf_dataset)
+    use_hf = bool(args.hf_dataset or args.parquet)
     try:
-        if use_hf:
-            specs = load_specs_from_hf(
-                dataset=args.hf_dataset,
-                config=args.hf_config,
-                split=args.hf_split,
-                offset=args.hf_offset,
-                length=args.hf_length,
-            )
+        if args.hf_dataset:
+            try:
+                specs = load_specs_from_hf(
+                    dataset=args.hf_dataset,
+                    config=args.hf_config,
+                    split=args.hf_split,
+                    offset=args.hf_offset,
+                    length=args.hf_length,
+                )
+            except Exception as exc:
+                print(
+                    f"warning: dataset viewer rows unavailable ({exc}); downloading parquet files",
+                    file=sys.stderr,
+                )
+                specs = load_hub_rows(args.hf_dataset)
+                end = args.hf_offset + args.hf_length if args.hf_length else None
+                specs = specs[args.hf_offset:end]
+        elif args.parquet:
+            specs = load_parquet_rows([Path(p) for p in args.parquet])
         else:
             json_path = Path(args.json)
             if not json_path.is_file():
