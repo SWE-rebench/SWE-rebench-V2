@@ -34,10 +34,11 @@ python3 scripts/eval.py \
 
 [SWE-rebench V2.1](https://huggingface.co/datasets/ibragim-bad/SWE-rebench-V2.1) contains 21,272 re-verified
 tasks: SWE-rebench V2 tasks with repaired statements, tests, images and log parsers, plus 7,935 Python tasks
-from the first SWE-rebench. Each row is the content of one Harbor task, so evaluation runs the Harbor
-verifier: `solution/solve.sh` applies the patch, then `tests/test.sh` restores `test_files`, applies
-`test_patch`, runs `test_cmd` and grades the log with the standalone grader for `log_parser`. Reward is 1 when
-every `FAIL_TO_PASS` and `PASS_TO_PASS` test passes; tests outside these lists are ignored.
+from the first SWE-rebench. Rows use the SWE-rebench V2 columns plus `workdir`, `env`, `test_files`, `test_env`,
+`tags` and `quality_flags`. Each row is the content of one Harbor task, so evaluation runs the Harbor verifier:
+`solution/solve.sh` applies the patch, then `tests/test.sh` restores `test_files`, applies `test_patch`, runs
+`install_config.test_cmd` and grades the log with the standalone grader for `install_config.log_parser`. Reward is 1
+when every `FAIL_TO_PASS` and `PASS_TO_PASS` test passes; tests outside these lists are ignored.
 
 ```bash
 python3 scripts/eval.py \
@@ -63,6 +64,14 @@ python3 scripts/to_harbor.py --hf-dataset ibragim-bad/SWE-rebench-V2.1 --out tas
 # Run one task or the whole directory with Harbor
 harbor run -p tasks/aio-libs__aiohttp-10300 -a oracle
 harbor run -p tasks -a <agent>
+```
+
+The rendered tasks are also published as
+[`ibragim-bad/SWE-rebench-V2.1-harbor`](https://huggingface.co/datasets/ibragim-bad/SWE-rebench-V2.1-harbor), which
+Harbor runs without conversion:
+
+```bash
+harbor run --repo https://huggingface.co/datasets/ibragim-bad/SWE-rebench-V2.1-harbor -i aio-libs__aiohttp-10300 -a oracle
 ```
 
 ## Repository layout

@@ -88,7 +88,7 @@ def test_sh(row: dict) -> str:
         _shell_template("test.sh").replace("@@WORKDIR@@", row["workdir"])
         .replace("@@TEST_FILES@@", " ".join(shlex.quote(f) for f in row["test_files"]))
         .replace("@@TEST_ENV@@", "".join(f"export {e['name']}={e['value']}\n" for e in row.get("test_env") or []))
-        .replace("@@TEST_CMD@@", row["test_cmd"])
+        .replace("@@TEST_CMD@@", row["install_config"]["test_cmd"])
     )
 
 
@@ -114,7 +114,7 @@ def task_toml(row: dict, org: str = DEFAULT_ORG) -> str:
         f"tags = {_quote(list(row['tags']))}",
         f"repo = {_quote(row['repo'])}",
         f"language = {_quote(row['language'])}",
-        f"log_parser = {_quote(row['log_parser'])}",
+        f"log_parser = {_quote(row['install_config']['log_parser'])}",
         f"quality_flags = {_quote(list(row['quality_flags']))}",
         "",
         "[verifier]",
@@ -143,7 +143,7 @@ def verifier_files(row: dict) -> dict[str, str]:
         "tests/test.sh": test_sh(row),
         "tests/test.patch": row["test_patch"],
         "tests/config.json": config_json(row),
-        "tests/grade.py": grader_source(row["log_parser"]),
+        "tests/grade.py": grader_source(row["install_config"]["log_parser"]),
     }
 
 
