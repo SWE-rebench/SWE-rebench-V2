@@ -30,6 +30,41 @@ python3 scripts/eval.py \
   --report-json eval_report.json
 ```
 
+## SWE-rebench V2.1
+
+[SWE-rebench V2.1](https://huggingface.co/datasets/ibragim-bad/SWE-rebench-V2.1) contains 21,272 re-verified
+tasks: SWE-rebench V2 tasks with repaired statements, tests, images and log parsers, plus 7,935 Python tasks
+from the first SWE-rebench. Each row is the content of one Harbor task, so evaluation runs the Harbor
+verifier: `solution/solve.sh` applies the patch, then `tests/test.sh` restores `test_files`, applies
+`test_patch`, runs `test_cmd` and grades the log with the standalone grader for `log_parser`. Reward is 1 when
+every `FAIL_TO_PASS` and `PASS_TO_PASS` test passes; tests outside these lists are ignored.
+
+```bash
+python3 scripts/eval.py \
+  --hf-dataset ibragim-bad/SWE-rebench-V2.1 \
+  --instance-ids aio-libs__aiohttp-10300,0b01001001__spectree-64 \
+  --max-workers 2 \
+  --golden-eval \
+  --report-json eval_report.json
+```
+
+`--patches` works as for V2 rows. `--parquet <files or dirs>` reads a local copy instead of the Hub. When the
+dataset viewer is unavailable, `eval.py` downloads the parquet files with `huggingface_hub`.
+
+Each row unpacks into one Harbor task directory (`task.toml`, `instruction.md`, `solution/`, `tests/`), identical
+to the task published on the Harbor Hub:
+
+```bash
+# All 21,272 tasks, or a subset with --instance-ids
+python3 scripts/to_harbor.py --hf-dataset ibragim-bad/SWE-rebench-V2.1 --out tasks
+python3 scripts/to_harbor.py --hf-dataset ibragim-bad/SWE-rebench-V2.1 --out tasks \
+  --instance-ids aio-libs__aiohttp-10300,0b01001001__spectree-64
+
+# Run one task or the whole directory with Harbor
+harbor run -p tasks/aio-libs__aiohttp-10300 -a oracle
+harbor run -p tasks -a <agent>
+```
+
 ## Repository layout
 
 - `prompts/annotations/` — main labeling prompts (Jinja templates)
@@ -46,6 +81,8 @@ python3 scripts/eval.py \
 - `scripts/build_base_images.py` — build base Docker images from `base_dockerfiles/`
 - `scripts/build_instance_images.py` — render + build per-task images
 - `scripts/eval.py` — run tasks in Docker and parse test logs
+- `scripts/to_harbor.py` — write SWE-rebench V2.1 rows as Harbor task directories
+- `lib/harbor_tasks/` — Harbor task templates, the log parsers that `tests/grade.py` is built from, and row loaders for SWE-rebench V2.1
 - `lib/agent/log_parsers.py` — parsers referenced by tasks
 - `sample.json` — example task list
 - `issue_based_tasks_sample.json` — issue-based task samples

@@ -1,2 +1,4 @@
 jinja2
 openai
+huggingface_hub
+pyarrow
