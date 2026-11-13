@@ -49,14 +49,20 @@ python3 scripts/eval.py \
 ```
 
 `--patches` works as for V2 rows. `--parquet <files or dirs>` reads a local copy instead of the Hub. When the
-dataset viewer is unavailable (for example, for a private dataset), `eval.py` downloads the parquet files with
-`huggingface_hub`; run `hf auth login` or set `HF_TOKEN` for private datasets.
+dataset viewer is unavailable, `eval.py` downloads the parquet files with `huggingface_hub`.
 
-Convert rows to Harbor task directories, byte-identical to the tasks published on the Harbor Hub:
+Each row unpacks into one Harbor task directory (`task.toml`, `instruction.md`, `solution/`, `tests/`), identical
+to the task published on the Harbor Hub:
 
 ```bash
+# All 21,272 tasks, or a subset with --instance-ids
 python3 scripts/to_harbor.py --hf-dataset ibragim-bad/SWE-rebench-V2.1 --out tasks
+python3 scripts/to_harbor.py --hf-dataset ibragim-bad/SWE-rebench-V2.1 --out tasks \
+  --instance-ids aio-libs__aiohttp-10300,0b01001001__spectree-64
+
+# Run one task or the whole directory with Harbor
 harbor run -p tasks/aio-libs__aiohttp-10300 -a oracle
+harbor run -p tasks -a <agent>
 ```
 
 ## Repository layout
