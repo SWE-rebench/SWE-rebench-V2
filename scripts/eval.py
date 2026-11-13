@@ -2,7 +2,6 @@
 import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
-import os
 import re
 import subprocess
 import sys
@@ -70,11 +69,7 @@ def fetch_hf_rows(
         }
     )
     url = f"{HF_ROWS_ENDPOINT}?{query}"
-    headers = {"User-Agent": "rebench-eval/1.0"}
-    token = os.environ.get("HF_TOKEN")
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-    req = Request(url, headers=headers)
+    req = Request(url, headers={"User-Agent": "rebench-eval/1.0"})
     with urlopen(req, timeout=60) as resp:  # nosec: fixed trusted endpoint
         content = resp.read()
     return json.loads(content.decode("utf-8"))

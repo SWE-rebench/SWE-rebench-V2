@@ -6,13 +6,16 @@ so `scripts/eval.py` and `scripts/to_harbor.py` run exactly the published checks
 
 from __future__ import annotations
 
+import ast
+import functools
 import json
 import shlex
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 TEMPLATES = HERE / "templates"
-GRADERS = HERE / "graders"
+LOG_PARSERS = HERE / "log_parsers.py"
+GRADER_PROVIDED = {"json", "sys", "Enum", "TestStatus"}
 
 DEFAULT_ORG = "ibragim-badertdinov"
 AUTHOR_NAME = "Nebius AI R&D"
@@ -23,17 +26,66 @@ def _quote(value: object) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
+@functools.cache
+def _log_parser_library() -> tuple[dict[str, str], dict[str, tuple[ast.stmt, str, str]]]:
+    source = LOG_PARSERS.read_text(encoding="utf-8")
+    lines = source.splitlines(keepends=True)
+    imports: dict[str, str] = {}
+    definitions: dict[str, tuple[ast.stmt, str, str]] = {}
+    for node in ast.parse(source).body:
+        segment = ast.get_source_segment(source, node)
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            for alias in node.names:
+                imports[alias.asname or alias.name.split(".")[0]] = segment
+            continue
+        if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+            name = node.name
+        elif isinstance(node, (ast.Assign, ast.AnnAssign)):
+            name = (node.targets[0] if isinstance(node, ast.Assign) else node.target).id
+        else:
+            continue
+        start = node.lineno - 1
+        while start > 0 and lines[start - 1].startswith("# "):
+            start -= 1
+        definitions[name] = (node, segment, "".join(lines[start : node.lineno - 1]))
+    return imports, definitions
+
+
+def _loaded_names(node: ast.AST) -> set[str]:
+    return {n.id for n in ast.walk(node) if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load)}
+
+
 def grader_source(log_parser: str) -> str:
-    path = GRADERS / f"{log_parser}.py"
-    if not path.is_file():
-        raise ValueError(f"No grader for log parser {log_parser!r}.")
-    return path.read_text(encoding="utf-8")
+    """Build the standalone tests/grade.py: the template plus every definition the parser needs."""
+    imports, definitions = _log_parser_library()
+    if log_parser not in definitions or log_parser in GRADER_PROVIDED:
+        raise ValueError(f"No log parser {log_parser!r}.")
+    template = (TEMPLATES / "grade.py").read_text(encoding="utf-8").replace("@@PARSER@@", log_parser)
+    stack = list(_loaded_names(ast.parse(template.replace("@@", "#@@"))) & definitions.keys())
+    needed: set[str] = set()
+    while stack:
+        name = stack.pop()
+        if name not in needed and name not in GRADER_PROVIDED:
+            needed.add(name)
+            if name in definitions:
+                stack.extend(_loaded_names(definitions[name][0]) & (definitions.keys() | imports.keys()))
+    used_imports = sorted({imports[n] for n in needed if n in imports})
+    body = "\n\n\n".join(segment for name, (_, segment, _) in definitions.items() if name in needed)
+    return (
+        template.replace("@@NOTE@@", definitions[log_parser][2])
+        .replace("@@IMPORTS@@", "\n".join(used_imports))
+        .replace("@@DEFINITIONS@@", body)
+    )
+
+
+def _shell_template(name: str) -> str:
+    apply_patch = (TEMPLATES / "apply_patch.sh").read_text(encoding="utf-8")
+    return (TEMPLATES / name).read_text(encoding="utf-8").replace("@@APPLY_PATCH@@", apply_patch)
 
 
 def test_sh(row: dict) -> str:
-    template = (TEMPLATES / "test.sh").read_text(encoding="utf-8")
     return (
-        template.replace("@@WORKDIR@@", row["workdir"])
+        _shell_template("test.sh").replace("@@WORKDIR@@", row["workdir"])
         .replace("@@TEST_FILES@@", " ".join(shlex.quote(f) for f in row["test_files"]))
         .replace("@@TEST_ENV@@", "".join(f"export {e['name']}={e['value']}\n" for e in row.get("test_env") or []))
         .replace("@@TEST_CMD@@", row["test_cmd"])
@@ -41,8 +93,7 @@ def test_sh(row: dict) -> str:
 
 
 def solve_sh(row: dict) -> str:
-    template = (TEMPLATES / "solve.sh").read_text(encoding="utf-8")
-    return template.replace("@@WORKDIR@@", row["workdir"])
+    return _shell_template("solve.sh").replace("@@WORKDIR@@", row["workdir"])
 
 
 def config_json(row: dict) -> str:

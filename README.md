@@ -50,7 +50,7 @@ python3 scripts/eval.py \
 
 `--patches` works as for V2 rows. `--parquet <files or dirs>` reads a local copy instead of the Hub. When the
 dataset viewer is unavailable (for example, for a private dataset), `eval.py` downloads the parquet files with
-`huggingface_hub`; set `HF_TOKEN` or run `hf auth login` for private datasets.
+`huggingface_hub`; run `hf auth login` or set `HF_TOKEN` for private datasets.
 
 Convert rows to Harbor task directories, byte-identical to the tasks published on the Harbor Hub:
 
@@ -76,7 +76,7 @@ harbor run -p tasks/aio-libs__aiohttp-10300 -a oracle
 - `scripts/build_instance_images.py` — render + build per-task images
 - `scripts/eval.py` — run tasks in Docker and parse test logs
 - `scripts/to_harbor.py` — write SWE-rebench V2.1 rows as Harbor task directories
-- `lib/harbor_tasks/` — Harbor task templates, standalone graders and row loaders for SWE-rebench V2.1
+- `lib/harbor_tasks/` — Harbor task templates, the log parsers that `tests/grade.py` is built from, and row loaders for SWE-rebench V2.1
 - `lib/agent/log_parsers.py` — parsers referenced by tasks
 - `sample.json` — example task list
 - `issue_based_tasks_sample.json` — issue-based task samples
