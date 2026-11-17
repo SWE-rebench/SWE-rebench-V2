@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 def is_harbor_row(row: dict) -> bool:
-    return "workdir" in row and "test_cmd" in row
+    return "workdir" in row and "test_files" in row
 
 
 def load_parquet_rows(paths: list[Path]) -> list[dict]:
